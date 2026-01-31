@@ -1,7 +1,12 @@
-use std::{collections::HashMap, error::Error, fs::File, io::BufReader};
+use std::{
+    collections::HashMap,
+    error::Error,
+    fs::File,
+    io::{self, BufReader},
+};
 
-use csv::{ReaderBuilder, Trim};
-use serde::Deserialize;
+use csv::{ReaderBuilder, Trim, Writer};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
 struct Transaction {
@@ -23,7 +28,7 @@ enum TransactionType {
     Withdrawal,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 struct UserAccount {
     client: u16,
     available: f64,
@@ -53,7 +58,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         });
 
         if account.locked {
-            println!(
+            eprintln!(
                 "Account {} is locked! Transaction {} cancelled",
                 account.client, transaction.transaction_id
             );
@@ -68,22 +73,17 @@ fn main() -> Result<(), Box<dyn Error>> {
                         account.total -= disputed_amount;
 
                         if account.total != account.available - account.held {
-                            println!(
+                            eprintln!(
                                 "Something went wrong with this account/chargback! {}",
                                 transaction.transaction_id
                             );
                         }
                     } else {
-                        println!(
+                        eprintln!(
                             "Failed to find amount for disputed transaction {}",
                             transaction.transaction_id
                         );
                     }
-                } else {
-                    println!(
-                        "Failed to find disputed transaction {}",
-                        transaction.transaction_id
-                    );
                 }
             }
             TransactionType::Deposit => {
@@ -92,7 +92,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     account.total += amount;
 
                     if account.total != account.available - account.held {
-                        println!(
+                        eprintln!(
                             "Something went wrong with this account/deposit! {}",
                             transaction.transaction_id
                         );
@@ -100,7 +100,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                     transactions.insert(transaction.transaction_id, transaction);
                 } else {
-                    println!(
+                    eprintln!(
                         "Failed to find amount for deposit {}",
                         transaction.transaction_id
                     );
@@ -113,22 +113,17 @@ fn main() -> Result<(), Box<dyn Error>> {
                         account.held += disputed_amount;
 
                         if account.total != account.available - account.held {
-                            println!(
+                            eprintln!(
                                 "Something went wrong with this account/dispute! {}",
                                 transaction.transaction_id
                             );
                         }
                     } else {
-                        println!(
+                        eprintln!(
                             "Failed to find amount for disputed transaction {}",
                             transaction.transaction_id
                         );
                     }
-                } else {
-                    println!(
-                        "Failed to find disputed transaction {}",
-                        transaction.transaction_id
-                    );
                 }
             }
             TransactionType::Resolve => {
@@ -138,19 +133,14 @@ fn main() -> Result<(), Box<dyn Error>> {
                         account.held -= disputed_amount;
 
                         if account.total != account.available - account.held {
-                            println!(
+                            eprintln!(
                                 "Something went wrong with this account/resolve! {}",
                                 transaction.transaction_id
                             );
                         }
                     }
-                    println!(
+                    eprintln!(
                         "Failed to find amount for disputed transaction {}",
-                        transaction.transaction_id
-                    );
-                } else {
-                    println!(
-                        "Failed to find disputed transaction {}",
                         transaction.transaction_id
                     );
                 }
@@ -158,7 +148,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             TransactionType::Withdrawal => {
                 if let Some(amount) = transaction.amount {
                     if account.available < amount {
-                        println!(
+                        eprintln!(
                             "Account {} has insufficient funds for transaction {}",
                             account.client, transaction.transaction_id
                         );
@@ -168,7 +158,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     account.total -= amount;
 
                     if account.total != account.available - account.held {
-                        println!(
+                        eprintln!(
                             "Something went wrong with this account/withdrawal! {}",
                             transaction.transaction_id
                         );
@@ -176,7 +166,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
                     transactions.insert(transaction.transaction_id, transaction);
                 } else {
-                    println!(
+                    eprintln!(
                         "Failed to get amount for transaction {}",
                         transaction.transaction_id
                     );
@@ -185,8 +175,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         };
     }
 
+    let mut csv_writer = Writer::from_writer(io::stdout());
+
     for account in accounts.values() {
-        println!("{:#?}", account);
+        csv_writer.serialize(account)?;
     }
+
+    csv_writer.flush()?;
     Ok(())
 }
