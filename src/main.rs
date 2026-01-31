@@ -20,7 +20,7 @@ enum TransactionType {
     Deposit,
     Dispute,
     Resolve,
-    Withdrawl,
+    Withdrawal,
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
