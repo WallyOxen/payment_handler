@@ -1,4 +1,4 @@
-use std::{error::Error, io};
+use std::{error::Error, fs::File, io::BufReader};
 
 use csv::{ReaderBuilder, Trim};
 use serde::Deserialize;
@@ -24,11 +24,12 @@ enum TransactionType {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let mut reader = ReaderBuilder::new()
-        .trim(Trim::All)
-        .from_reader(io::stdin());
+    let file = File::open("test_input.csv")?;
+    let reader = BufReader::new(file);
 
-    for result in reader.deserialize() {
+    let mut csv_reader = ReaderBuilder::new().trim(Trim::All).from_reader(reader);
+
+    for result in csv_reader.deserialize() {
         let transaction: Transaction = result?;
         println!("{:#?}", transaction);
     }
