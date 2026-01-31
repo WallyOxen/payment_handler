@@ -8,6 +8,7 @@ use std::{
 };
 
 use csv::{ReaderBuilder, Trim, Writer};
+use rust_decimal::Decimal;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]
@@ -17,7 +18,7 @@ struct Transaction {
     client: u16,
     #[serde(rename = "tx")]
     transaction_id: u32,
-    amount: Option<f64>,
+    amount: Option<Decimal>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -33,9 +34,9 @@ enum TransactionType {
 #[derive(Debug, Serialize)]
 struct UserAccount {
     client: u16,
-    available: f64,
-    held: f64,
-    total: f64,
+    available: Decimal,
+    held: Decimal,
+    total: Decimal,
     locked: bool,
 }
 
@@ -61,9 +62,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
         let account = accounts.entry(transaction.client).or_insert(UserAccount {
             client: transaction.client,
-            available: 0.0,
-            held: 0.0,
-            total: 0.0,
+            available: Decimal::new(0, 4),
+            held: Decimal::new(0, 4),
+            total: Decimal::new(0, 4),
             locked: false,
         });
 
@@ -82,7 +83,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         account.held -= disputed_amount;
                         account.total -= disputed_amount;
 
-                        if account.total != account.available - account.held {
+                        if account.total != account.available + account.held {
                             eprintln!(
                                 "Something went wrong with this account/chargback! {}",
                                 transaction.transaction_id
@@ -101,7 +102,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     account.available += amount;
                     account.total += amount;
 
-                    if account.total != account.available - account.held {
+                    if account.total != account.available + account.held {
                         eprintln!(
                             "Something went wrong with this account/deposit! {}",
                             transaction.transaction_id
@@ -122,7 +123,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         account.available -= disputed_amount;
                         account.held += disputed_amount;
 
-                        if account.total != account.available - account.held {
+                        if account.total != account.available + account.held {
                             eprintln!(
                                 "Something went wrong with this account/dispute! {}",
                                 transaction.transaction_id
@@ -142,7 +143,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                         account.available += disputed_amount;
                         account.held -= disputed_amount;
 
-                        if account.total != account.available - account.held {
+                        if account.total != account.available + account.held {
                             eprintln!(
                                 "Something went wrong with this account/resolve! {}",
                                 transaction.transaction_id
@@ -167,7 +168,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     account.available -= amount;
                     account.total -= amount;
 
-                    if account.total != account.available - account.held {
+                    if account.total != account.available + account.held {
                         eprintln!(
                             "Something went wrong with this account/withdrawal! {}",
                             transaction.transaction_id
