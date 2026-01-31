@@ -1,8 +1,10 @@
 use std::{
     collections::HashMap,
+    env::args,
     error::Error,
     fs::File,
     io::{self, BufReader},
+    process,
 };
 
 use csv::{ReaderBuilder, Trim, Writer};
@@ -38,7 +40,15 @@ struct UserAccount {
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
-    let file = File::open("test_input.csv")?;
+    let args: Vec<String> = args().collect();
+
+    if args.len() > 2 || args.len() == 1 {
+        eprintln!("Expected only 1 argument of input file name");
+        process::exit(1);
+    }
+
+    // Safe to unwrap index 1 as above ensures there is a value
+    let file = File::open(args.get(1).unwrap())?;
     let reader = BufReader::new(file);
 
     let mut accounts: HashMap<u16, UserAccount> = HashMap::new();
