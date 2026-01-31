@@ -82,6 +82,7 @@ fn main() -> Result<(), Box<dyn Error>> {
                     if let Some(disputed_amount) = disputed_transaction.amount {
                         account.held -= disputed_amount;
                         account.total -= disputed_amount;
+                        account.locked = true;
 
                         if account.total != account.available + account.held {
                             eprintln!(
@@ -149,11 +150,12 @@ fn main() -> Result<(), Box<dyn Error>> {
                                 transaction.transaction_id
                             );
                         }
+                    } else {
+                        eprintln!(
+                            "Failed to find amount for disputed transaction {}",
+                            transaction.transaction_id
+                        );
                     }
-                    eprintln!(
-                        "Failed to find amount for disputed transaction {}",
-                        transaction.transaction_id
-                    );
                 }
             }
             TransactionType::Withdrawal => {
